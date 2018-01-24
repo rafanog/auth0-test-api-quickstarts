@@ -5,20 +5,15 @@ require('dotenv').config();
 
 chai.use(chaiHttp);
 
-const apiURL = process.env.API_URL;
-
-const createClientGrant = function(clientId, scopes) {
-  const clientGrant = {
-    client_id: clientId,
-    audience: process.env.AUTH0_AUDIENCE,
-    scope: scopes
-  }
-
-  return chai.request('https://' + process.env.AUTH0_DOMAIN)
-    .post('/api/v2/client-grants')
-    .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-    .send(clientGrant);
+if (!process.env.AUTH0_DOMAIN || !process.env.AUTH0_AUDIENCE || !process.env.API_URL
+    || !process.env.AUTH0_CLIENT_ID_1 || !process.env.AUTH0_CLIENT_SECRET_1
+    || !process.env.AUTH0_CLIENT_ID_2 || !process.env.AUTH0_CLIENT_SECRET_2
+    || !process.env.AUTH0_CLIENT_ID_3 || !process.env.AUTH0_CLIENT_SECRET_3
+    || !process.env.AUTH0_CLIENT_ID_4 || !process.env.AUTH0_CLIENT_SECRET_4) {
+  throw 'Make sure you have set the variables in your .env file'
 }
+
+const apiURL = process.env.API_URL;
 
 const getToken = function(clientId, clientSecret) {
   tokenRequestBody = {
@@ -32,12 +27,6 @@ const getToken = function(clientId, clientSecret) {
     .post('/oauth/token')
     .set('Content-Type', 'application/json')
     .send(tokenRequestBody)
-}
-
-const deleteClientGrant = function(clientGrantId) {
-  return chai.request('https://' + process.env.AUTH0_DOMAIN)
-    .delete('/api/v2/client-grants/' + clientGrantId)
-    .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
 }
 
 describe('Request without authorization header field', function() {
@@ -71,47 +60,6 @@ describe('Request without authorization header field', function() {
 });
 
 describe('Request with authorization header field', function() {
-  let clientId = null;
-  let clientSecret = null;
-
-  before(async function() {
-    if (!process.env.AUTH0_DOMAIN || !process.env.AUTH0_AUDIENCE || !process.env.AUTH0_MANAGEMENT_API_TOKEN) {
-      throw 'Make sure you have AUTH0_DOMAIN, AUTH0_AUDIENCE and AUTH0_MANAGEMENT_API_TOKEN in your .env file'
-    }
-
-    const res = await chai.request('https://' + process.env.AUTH0_DOMAIN)
-      .post('/api/v2/clients')
-      .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-      .send({ name: 'Test API QS Client' })
-
-    clientId = res.body.client_id;
-    clientSecret = res.body.client_secret;
-    scopes = [
-      {
-        "description": "Read messages",
-        "value": "read:messages"
-      },
-      {
-        "description": "Write messages",
-        "value": "write:messages"
-      }
-    ];
-    await chai.request('https://' + process.env.AUTH0_DOMAIN)
-      .post('/api/v2/resource-servers')
-      .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-      .send({ identifier: process.env.AUTH0_AUDIENCE, scopes: scopes })
-  });
-      
-  after(async function() {
-    const res = await chai.request('https://' + process.env.AUTH0_DOMAIN)
-      .delete('/api/v2/clients/' + clientId)
-      .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-
-    await chai.request('https://' + process.env.AUTH0_DOMAIN)
-      .delete('/api/v2/resource-servers/' + process.env.AUTH0_AUDIENCE)
-      .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-  });
-
   context('Authorization header field with value \'Bearer \'', function() {
     it('GET /api/private return 401 Unauthorized', function(done) {
       chai.request(apiURL)
@@ -200,21 +148,15 @@ describe('Request with authorization header field', function() {
     });
   });
 
-  context('token with invalid signature', function() {
+  context('Token with invalid signature', function() {
     let validToken = null;
-    let clientGrantId = null;
 
     before(async function() {
-      scope = [];
-      const resp = await createClientGrant(clientId, scope);
-      clientGrantId = resp.body.id;
+      let clientId = process.env.AUTH0_CLIENT_ID_1;
+      let clientSecret = process.env.AUTH0_CLIENT_SECRET_1;
 
       const token =  await getToken(clientId, clientSecret);
       validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
     });
 
     it('GET /api/private return 401 Unauthorized', function(done) {
@@ -242,16 +184,11 @@ describe('Request with authorization header field', function() {
     let validToken = null;
     
     before(async function() {
-      scope = [];
-      const resp = await createClientGrant(clientId, scope);
-      clientGrantId = resp.body.id;
+      let clientId = process.env.AUTH0_CLIENT_ID_1;
+      let clientSecret = process.env.AUTH0_CLIENT_SECRET_1;
 
       const token =  await getToken(clientId, clientSecret);
       validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
     });
 
     it('GET /api/private return 200 OK', function(done) {
@@ -278,16 +215,11 @@ describe('Request with authorization header field', function() {
 
   context('Valid token with read:messages scope', function() {
     before(async function() {
-      scope = ['read:messages'];
-      const resp = await createClientGrant(clientId, scope);
-      clientGrantId = resp.body.id;
+      let clientId = process.env.AUTH0_CLIENT_ID_2;
+      let clientSecret = process.env.AUTH0_CLIENT_SECRET_2;
 
       const token =  await getToken(clientId, clientSecret);
       validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
     });
 
     it('GET /api/private return 200 OK', function(done) {
@@ -315,16 +247,11 @@ describe('Request with authorization header field', function() {
 
   context('Valid token with write:messages scope', function() {
     before(async function() {
-      scope = ['write:messages'];
-      const resp = await createClientGrant(clientId, scope);
-      clientGrantId = resp.body.id;
+      let clientId = process.env.AUTH0_CLIENT_ID_3;
+      let clientSecret = process.env.AUTH0_CLIENT_SECRET_3;
 
       const token =  await getToken(clientId, clientSecret);
       validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
     });
 
     it('GET /api/private return 200 OK', function(done) {
@@ -351,16 +278,11 @@ describe('Request with authorization header field', function() {
 
   context('Valid token with read:messages and write:messages scopes', function() {
     before(async function() {
-      scope = ['read:messages', 'write:messages'];
-      const resp = await createClientGrant(clientId, scope);
-      clientGrantId = resp.body.id;
+      let clientId = process.env.AUTH0_CLIENT_ID_4;
+      let clientSecret = process.env.AUTH0_CLIENT_SECRET_4;
 
       const token =  await getToken(clientId, clientSecret);
       validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
     });
 
     it('GET /api/private return 200 OK', function(done) {
@@ -381,51 +303,6 @@ describe('Request with authorization header field', function() {
       .end(function(err, res) {
         res.should.have.to.be.json;
         res.should.have.status(200);
-        done();
-      });
-    });
-  });
-
-  context('Expired token', function() {
-    let validToken = null;
-
-    before(async function() {
-        scope = ['read:messages'];
-        const resp = await createClientGrant(clientId, scope);
-
-        clientGrantId = resp.body.id;
-
-      await chai.request('https://' + process.env.AUTH0_DOMAIN)
-        .patch('/api/v2/resource-servers/' + process.env.AUTH0_AUDIENCE)
-        .set('Authorization', 'Bearer ' + process.env.AUTH0_MANAGEMENT_API_TOKEN)
-        .send({ token_lifetime: 1 })
-
-      const token =  await getToken(clientId, clientSecret);
-      validToken = token.body.access_token;
-    });
-
-    after(async function() {
-      await deleteClientGrant(clientGrantId);
-    });
-
-    it('GET /api/private return 401 Unauthorized', function(done) {
-      setTimeout(function() {
-        chai.request(apiURL)
-          .get('/api/private')
-          .set('Authorization', 'Bearer ' + validToken)
-          .end(function(err, res) {
-            res.should.have.status(401);
-            done();
-          });
-      }, 1000);
-    });
-
-    it('GET /api/private-scoped return 401 Unauthorized', function(done) {
-      chai.request(apiURL)
-      .get('/api/private-scoped')
-      .set('Authorization', 'Bearer ' + validToken)
-      .end(function(err, res) {
-        res.should.have.status(401);
         done();
       });
     });
